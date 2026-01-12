@@ -21,9 +21,24 @@ ORCHESTRATOR (this file)
      ├─► research_expander   # Find related/opposing studies via Sonar API
      ├─► comparator          # Cross-study comparison + controversy analysis
      ├─► image_curator       # Extract images + decide placement
-     ├─► blog_writer         # Generate blog draft
+     ├─► blog_writer         # Generate blog draft (model: sonnet)
      └─► quality_reviewer    # Review + re-invoke agents if score < 0.7
 ```
+
+### 모델 설정
+- `blog_writer`: **Sonnet 4.5** 사용 (글쓰기 품질 최적화)
+- `image_curator`: **Sonnet 4.5** 사용 (Vision 분석 필수)
+- 나머지 에이전트: 기본 모델
+
+### 이미지 추출 방식 (2024 업데이트)
+```
+기존: PyMuPDF get_images() → 임베디드 비트맵만 추출 (벡터 Figure 누락)
+개선: PDF 페이지 렌더링 → Claude Vision 분석 → Figure 식별
+```
+
+**핵심 도구:**
+- `extractors/pdf_page_renderer.py`: PDF → 페이지 이미지 렌더링
+- `image_curator` 에이전트: Vision으로 Figure 식별 및 선별
 
 Each agent returns structured YAML with `status`, `confidence`, and `decisions`. Quality reviewer can re-invoke any agent up to 2 times (loop prevention).
 
