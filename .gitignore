@@ -1,0 +1,28 @@
+# Environment variables (API keys)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Session state (recreated per run)
+state/session.yaml
+
+# Output files (generated content)
+output/*.md
+output/images/
+output/*.json
+
+# Input papers (user-specific)
+input/*.pdf
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db

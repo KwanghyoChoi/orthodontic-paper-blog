@@ -1,0 +1,100 @@
+# Session State Template
+# 각 논문 분석 세션의 상태를 추적
+
+session_id: ""  # 자동 생성: YYYY-MM-DD-NNN
+paper_file: ""  # input/논문파일.pdf
+started_at: ""  # ISO 8601
+status: "initialized"  # initialized, in_progress, completed, failed
+
+# 현재 진행 상황
+current_phase: ""  # paper_analysis, research_expansion, comparison, image_curation, writing, review
+iteration: 0  # quality_review 반복 횟수
+
+# 각 에이전트 상태
+agent_states:
+  paper_analyzer:
+    status: "pending"  # pending, running, completed, failed
+    started_at: null
+    completed_at: null
+    confidence: null
+    output_file: null
+    
+  research_expander:
+    status: "pending"
+    started_at: null
+    completed_at: null
+    confidence: null
+    searches_performed: 0
+    papers_found: 0
+    output_file: null
+    
+  comparator:
+    status: "pending"
+    started_at: null
+    completed_at: null
+    confidence: null
+    controversies_found: 0
+    output_file: null
+    
+  image_curator:
+    status: "pending"
+    started_at: null
+    completed_at: null
+    images_extracted: 0
+    images_selected: 0
+    output_file: null
+    
+  blog_writer:
+    status: "pending"
+    started_at: null
+    completed_at: null
+    word_count: 0
+    output_file: null
+    
+  quality_reviewer:
+    status: "pending"
+    started_at: null
+    completed_at: null
+    overall_score: null
+    sections_below_threshold: []
+    rework_requests: []
+
+# 재작업 요청 기록
+rework_history:
+  # - iteration: 1
+  #   from_agent: quality_reviewer
+  #   to_agent: comparator
+  #   request: "반대 연구 상세 추가"
+  #   resolved: true
+
+# 최종 출력
+outputs:
+  blog_markdown: null  # output/blog_YYYY-MM-DD.md
+  images_dir: null     # output/images/
+  metadata: null       # output/metadata.json
+
+# 에러 로그
+errors: []
+  # - timestamp: ""
+  #   agent: ""
+  #   error: ""
+  #   recovered: false
+
+# 품질 지표
+quality_metrics:
+  final_score: null
+  factual_accuracy: null
+  citation_completeness: null
+  readability_score: null
+  image_integration: null
+
+# 처리 시간
+timing:
+  total_duration_seconds: null
+  agent_durations:
+    paper_analyzer: null
+    research_expander: null
+    comparator: null
+    image_curator: null
+    blog_writer: null
+    quality_reviewer: null
