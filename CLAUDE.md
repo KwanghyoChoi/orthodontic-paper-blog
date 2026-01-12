@@ -91,12 +91,53 @@ python tools/publish_blog.py output/[블로그파일].md --publish
 ### 이미지 추출 방식 (2024 업데이트)
 ```
 기존: PyMuPDF get_images() → 임베디드 비트맵만 추출 (벡터 Figure 누락)
-개선: PDF 페이지 렌더링 → Claude Vision 분석 → Figure 식별
+개선: PDF 페이지 렌더링 → Claude Vision 분석 → Figure 식별 → 크롭 → 검증 루프
 ```
 
 **핵심 도구:**
 - `extractors/pdf_page_renderer.py`: PDF → 페이지 이미지 렌더링
-- `image_curator` 에이전트: Vision으로 Figure 식별 및 선별
+- `extractors/crop_figures_[논문ID].py`: Figure 영역 크롭 (논문별 생성)
+- `image_curator` 에이전트: Vision으로 Figure 식별, 크롭, **검증 및 재크롭**
+
+### ⚠️ 필수 워크플로우 (2025 업데이트)
+
+#### 1. 관련 연구 비교 섹션 필수 포함
+
+blog_writer가 생성하는 블로그에 **"다른 연구들은 뭐라고 하나?"** 섹션을 반드시 포함:
+
+```markdown
+## 다른 연구들은 뭐라고 하나?
+
+### [기존 연구 1] - [저널명] ([연도])
+- 구체적 수치 인용
+- 본 논문과의 차이점
+
+### 본 논문 vs 기존 연구 비교
+| 항목 | 본 논문 | 기존 연구 | 해석 |
+|-----|--------|----------|-----|
+| ... | ... | ... | ... |
+
+### 왜 수치가 다른가?
+- 측정 방법 차이
+- 대상 환자 차이
+- 시스템 차이
+```
+
+**주의:** 참고문헌에만 나열하고 본문에서 언급하지 않으면 안 됨!
+
+#### 2. 이미지 크롭 검증 루프 필수
+
+image_curator 단계에서 크롭 후 반드시 Vision으로 검증:
+
+```
+크롭 실행 → Vision 검증 → 문제 발견 시 좌표 조정 → 재크롭 → 재검증
+(최대 3회 반복, 해결 안 되면 페이지 전체 이미지 사용)
+```
+
+**검증 항목:**
+- [ ] Figure 내용이 모두 포함되었는가?
+- [ ] 캡션이 잘리지 않았는가?
+- [ ] 다이어그램의 모든 요소(a, b, c...)가 보이는가?
 
 Each agent returns structured YAML with `status`, `confidence`, and `decisions`. Quality reviewer can re-invoke any agent up to 2 times (loop prevention).
 
@@ -188,3 +229,5 @@ All progress tracked in `state/session.yaml`. On failure, resume from last succe
 2. Sonar API must use academic filter (`search_domain_filter: ["academic"]`)
 3. Quality gate: sections scoring < 0.7 trigger agent re-invocation
 4. Max 2 rework iterations per section to prevent infinite loops
+5. **⚠️ 블로그에 "다른 연구들은 뭐라고 하나?" 섹션 필수** - Sonar 검색 결과를 본문에 통합
+6. **⚠️ 이미지 크롭 후 반드시 Vision 검증** - 잘린 부분 있으면 재크롭 (최대 3회)

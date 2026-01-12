@@ -98,9 +98,81 @@ page_analysis:
 | Supplementary figures | 부가 정보 |
 | Funding/COI 정보 | 불필요 |
 
-### Step 4: 선별된 Figure 처리
+### Step 4: Figure 크롭 및 검증 루프 ⚠️ 필수
 
-선별된 Figure가 있는 페이지를 그대로 사용하거나, 필요시 영역 정보 기록:
+선별된 Figure를 페이지에서 크롭하고, **반드시 검증 후 필요시 재크롭**한다.
+
+#### 4-1. 크롭 스크립트 생성
+
+각 논문별로 크롭 좌표를 정의한 Python 스크립트 생성:
+
+```python
+# extractors/crop_figures_[논문ID].py
+figures = [
+    {
+        "page": 2,
+        "figure_id": "fig1_predictability",
+        "name": "Fig. 1 - Predictability",
+        "crop_box": (left, top, right, bottom),  # 픽셀 좌표
+    },
+    # ...
+]
+```
+
+#### 4-2. 크롭 실행
+
+```bash
+python extractors/crop_figures_[논문ID].py
+```
+
+#### 4-3. 검증 (Vision으로 크롭 결과 확인) ⚠️ 필수
+
+크롭된 각 이미지를 Read tool로 열어 다음을 확인:
+
+```yaml
+crop_verification:
+  - figure_id: "fig1_predictability"
+    checks:
+      - content_complete: true | false  # 핵심 내용이 모두 포함되었는가?
+      - caption_included: true | false  # 캡션이 포함되었는가?
+      - no_cutoff: true | false         # 잘린 부분이 없는가?
+
+    issues_found:
+      - "하단 30% 잘림 - Extrusion 30% 보이지 않음"
+      - "캡션 일부 잘림"
+
+    action: pass | adjust_crop
+
+    adjustment:
+      original_crop: (50, 280, 680, 820)
+      new_crop: (50, 280, 680, 1050)  # bottom 확장
+      reason: "다이어그램 전체 포함 위해 하단 확장"
+```
+
+#### 4-4. 재크롭 반복 (최대 3회)
+
+```
+검증 실패 → 좌표 조정 → 재크롭 → 재검증 → (반복)
+```
+
+**중단 조건:**
+- 모든 이미지가 검증 통과
+- 3회 반복 후에도 해결 안 됨 → 페이지 전체 이미지 사용
+
+#### 크롭 좌표 조정 가이드
+
+| 문제 | 해결 방법 |
+|-----|----------|
+| 하단 잘림 | bottom 값 증가 (예: 820 → 1050) |
+| 상단 잘림 | top 값 감소 (예: 280 → 200) |
+| 좌측 잘림 | left 값 감소 |
+| 우측 잘림 | right 값 증가 |
+| 캡션 누락 | bottom을 캡션 끝까지 확장 |
+| 여백 과다 | 각 방향 값을 Figure 경계에 맞게 조정 |
+
+### Step 5: 선별된 Figure 출력
+
+검증 완료된 Figure 정보 기록:
 
 ```yaml
 selected_figures:
@@ -217,9 +289,22 @@ ABO-OGS 점수 기준, 투명교정이 평균 9.9점 높음 (결과가 나쁨).
 2. pdf_page_renderer.py로 페이지 렌더링
 3. 각 페이지 이미지를 Read tool로 분석
 4. Figure 식별 및 가치 판단
-5. 선별된 Figure 목록 + 마크다운 출력
-6. blog_writer에게 전달
+5. 크롭 스크립트 생성 및 실행
+6. ⚠️ 크롭 결과 Vision 검증
+7. ⚠️ 검증 실패 시 좌표 조정 후 재크롭 (최대 3회 반복)
+8. 검증 완료된 Figure 목록 + 마크다운 출력
+9. blog_writer에게 전달
 ```
+
+## 크롭 검증 체크리스트
+
+모든 크롭 이미지에 대해 다음 확인:
+
+- [ ] Figure의 모든 구성요소가 보이는가? (a, b, c... 모든 패널)
+- [ ] 다이어그램/차트의 축, 레이블이 잘리지 않았는가?
+- [ ] 캡션이 포함되어 있는가? (또는 의도적 제외인가?)
+- [ ] 불필요한 여백이 과도하지 않은가?
+- [ ] 해상도가 충분한가? (텍스트 읽기 가능)
 
 ## 주의사항
 
