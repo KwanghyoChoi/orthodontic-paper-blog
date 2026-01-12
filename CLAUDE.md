@@ -17,6 +17,9 @@ python tools/publish_blog.py output/[블로그파일].md
 
 # 3. WordPress 발행 (publish - 확인 후)
 python tools/publish_blog.py output/[블로그파일].md --publish
+
+# 4. 발행 완료 후 임시 파일 정리
+rm -rf tmpclaude-*
 ```
 
 ## Full Pipeline Architecture
