@@ -4,25 +4,82 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Multi-agent system that transforms orthodontic research papers into professional blog posts. Takes a PDF paper as input, expands with related research via Perplexity Sonar API, performs comparative analysis, extracts/curates images, and generates publication-ready Korean blog content.
+Multi-agent system that transforms orthodontic research papers into professional blog posts, then publishes to WordPress. Takes a PDF paper as input, expands with related research via Perplexity Sonar API, performs comparative analysis, extracts/curates images, generates publication-ready Korean blog content, and publishes to WordPress with image hosting on Google Drive.
 
 ## Running the System
 
 ```bash
+# 1. 블로그 글 생성
 claude "논문 분석 시작: input/[논문파일명].pdf"
+
+# 2. WordPress 발행 (draft)
+python tools/publish_blog.py output/[블로그파일].md
+
+# 3. WordPress 발행 (publish - 확인 후)
+python tools/publish_blog.py output/[블로그파일].md --publish
 ```
 
-## Agent Pipeline
+## Full Pipeline Architecture
 
 ```
-ORCHESTRATOR (this file)
-     │
-     ├─► paper_analyzer      # Extract paper core + assess complexity
-     ├─► research_expander   # Find related/opposing studies via Sonar API
-     ├─► comparator          # Cross-study comparison + controversy analysis
-     ├─► image_curator       # Extract images + decide placement
-     ├─► blog_writer         # Generate blog draft (model: sonnet)
-     └─► quality_reviewer    # Review + re-invoke agents if score < 0.7
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 1: CONTENT GENERATION                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ORCHESTRATOR (this file)                                        │
+│       │                                                          │
+│       ├─► paper_analyzer      # 논문 핵심 추출 + 복잡도 판단     │
+│       ├─► research_expander   # Sonar API로 관련 연구 검색        │
+│       ├─► comparator          # 연구 간 비교 + 논쟁점 분석        │
+│       ├─► image_curator       # Vision으로 Figure 식별            │
+│       ├─► blog_writer         # 블로그 초안 생성 (model: sonnet)  │
+│       └─► quality_reviewer    # 검토 + score < 0.7 시 재호출      │
+│                                                                  │
+│                         ▼                                        │
+│              [output/*.md + images 생성]                         │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+              ┌───────────────────────────────┐
+              │          [HUMAN]              │
+              │   글 내용 + 이미지 확인       │
+              │   수정 요청 또는 승인         │
+              └───────────────┬───────────────┘
+                              │ 승인
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                    PHASE 2: PUBLISHING (자동)                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  python tools/publish_blog.py output/blog.md --publish           │
+│                                                                  │
+│  ┌────────────────┐    ┌────────────────┐                       │
+│  │image_processor │───►│gdrive_uploader │                       │
+│  │ PNG → WebP     │    │ Drive 업로드   │                       │
+│  └────────────────┘    └───────┬────────┘                       │
+│                                │                                 │
+│                       [이미지 URL 매핑]                          │
+│                                │                                 │
+│                                ▼                                 │
+│                    ┌────────────────────┐                       │
+│                    │ content_preparer   │                       │
+│                    │ MD→HTML + URL치환  │                       │
+│                    │ + 메타데이터 JSON  │                       │
+│                    └─────────┬──────────┘                       │
+│                              │                                   │
+│                              ▼                                   │
+│                    ┌────────────────────┐                       │
+│                    │wordpress_publisher │                       │
+│                    │ REST API 발행      │                       │
+│                    │ + FIFU 대표이미지  │                       │
+│                    │ + Rank Math KW     │                       │
+│                    └────────────────────┘                       │
+│                              │                                   │
+│                              ▼                                   │
+│                    [발행 완료 + URL 반환]                        │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ### 모델 설정
@@ -63,24 +120,54 @@ flags:
 
 ## Environment Setup
 
-Required:
+Required in `.env`:
 ```bash
-export PERPLEXITY_API_KEY="pplx-..."  # Sonar Pro API
+# Perplexity Sonar API
+PERPLEXITY_API_KEY=pplx-...
+
+# WordPress 발행
+WORDPRESS_URL=https://your-blog.com
+WORDPRESS_USERNAME=your_email
+WORDPRESS_APP_PASSWORD=xxxx xxxx xxxx xxxx xxxx xxxx
+
+# Google Drive 이미지 저장
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GOOGLE_REFRESH_TOKEN=...
+GOOGLE_DRIVE_FOLDER_ID=...
 ```
 
-Python dependencies for extractors/tools:
-- `PyMuPDF` (fitz) - PDF image extraction
-- `requests` - API calls
-- `python-dotenv` (optional) - .env loading
+Python dependencies:
+```bash
+pip install PyMuPDF requests python-dotenv Pillow markdown pyyaml
+```
 
 ## Key Commands
 
 ```bash
-# Extract images from PDF
-python extractors/pdf_image_extractor.py input/paper.pdf output/images/
+# PDF 페이지 렌더링
+python extractors/pdf_page_renderer.py input/paper.pdf output/images/pages/
 
-# Search orthodontic literature
+# Figure 크롭
+python extractors/crop_figures.py
+
+# 학술 문헌 검색
 python tools/sonar_api.py "IPR timing pediatric Invisalign"
+
+# 이미지 WebP 변환
+python tools/image_processor.py output/images/selected/
+
+# Google Drive 업로드
+python tools/gdrive_uploader.py output/images/selected/webp/
+
+# WordPress 발행 (draft)
+python tools/publish_blog.py output/blog.md
+
+# WordPress 발행 (publish)
+python tools/publish_blog.py output/blog.md --publish
+
+# WordPress 연결 테스트
+python tools/publish_blog.py --test-connection
 ```
 
 ## Session State
