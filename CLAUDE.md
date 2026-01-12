@@ -26,8 +26,9 @@ ORCHESTRATOR (this file)
 ```
 
 ### 모델 설정
-- `blog_writer`: **Sonnet 4.5** 사용 (글쓰기 품질 최적화)
-- `image_curator`: **Sonnet 4.5** 사용 (Vision 분석 필수)
+- `blog_writer`: **Claude Sonnet 4.5** 사용 (글쓰기 품질 최적화)
+- `image_curator`: **Claude Sonnet 4.5** 사용 (Vision 분석 필수)
+- `research_expander`: **Sonar Deep Research** 사용 (심층 학술 검색)
 - 나머지 에이전트: 기본 모델
 
 ### 이미지 추출 방식 (2024 업데이트)

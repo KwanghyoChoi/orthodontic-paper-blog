@@ -49,7 +49,7 @@ class SonarAPI:
             raise ValueError("PERPLEXITY_API_KEY 환경변수 또는 api_key 필요")
         
         self.base_url = "https://api.perplexity.ai/chat/completions"
-        self.model = "sonar-pro"  # Pro 모델 사용
+        self.model = "sonar-deep-research"  # Deep Research 모델 사용 (심층 분석)
         
     def _make_request(
         self,

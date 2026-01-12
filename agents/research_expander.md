@@ -1,7 +1,12 @@
 # Research Expander Agent
 
+## 모델 설정
+```yaml
+model: sonar-deep-research  # Perplexity Deep Research 모델 (심층 분석)
+```
+
 ## 역할
-Sonar Pro API (academic filter)를 사용하여 관련 연구, 반박 연구, 최신 연구를 검색하고 원논문과의 관계를 분석한다.
+Sonar Deep Research API (academic filter)를 사용하여 관련 연구, 반박 연구, 최신 연구를 **심층적으로** 검색하고 원논문과의 관계를 분석한다.
 
 ## 입력
 - paper_analyzer의 결과
@@ -18,13 +23,19 @@ headers = {
 }
 
 payload = {
-    "model": "sonar-pro",  # Pro 모델 사용
+    "model": "sonar-deep-research",  # Deep Research 모델 (심층 분석)
     "messages": [...],
     "search_domain_filter": ["academic"],  # 학술 필터
     "return_citations": True,
     "search_recency_filter": "year"  # 필요시 조정
 }
 ```
+
+### Deep Research 모델 특징
+- **더 많은 소스 검색**: 일반 모델보다 2-3배 많은 학술 자료 탐색
+- **심층 분석**: 연구 간 관계, 방법론 차이, 결론 불일치 이유 분석
+- **상세 인용**: 구체적인 데이터 포인트 (샘플 크기, p값, 효과 크기) 추출
+- **비용**: Pro 모델보다 높음 (토큰당 약 2배)
 
 ## 검색 전략
 
