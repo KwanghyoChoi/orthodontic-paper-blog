@@ -32,7 +32,7 @@ rm -rf tmpclaude-*
 │  ORCHESTRATOR (this file)                                        │
 │       │                                                          │
 │       ├─► paper_analyzer      # 논문 핵심 추출 + 복잡도 판단     │
-│       ├─► research_expander   # Sonar API로 관련 연구 검색        │
+│       ├─► research_expander   # Sonar API: 비교 연구 + 심화 검색   │
 │       ├─► comparator          # 연구 간 비교 + 논쟁점 분석        │
 │       ├─► image_curator       # Vision으로 Figure 식별            │
 │       ├─► blog_writer         # 블로그 초안 생성 (model: sonnet)  │
@@ -104,43 +104,82 @@ rm -rf tmpclaude-*
 
 ### ⚠️ 필수 워크플로우 (2025 업데이트)
 
-#### 1. 관련 연구 비교 섹션 필수 포함
+#### 1. 블로그 구조: 원논문 내용 → 정리 → 심화 섹션 → 참고문헌
 
-blog_writer가 생성하는 블로그에 **"다른 연구들은 뭐라고 하나?"** 섹션을 반드시 포함:
+**블로그 순서:**
+1. 원논문 핵심 내용 (배경, 방법, 발견, 임상적 의미)
+2. **정리** (원논문 내용 마무리)
+3. **🔬 한걸음 더 깊이 들여다보기** (심화 섹션 - 마지막에 배치)
+4. 참고문헌
+
+#### 2. "한걸음 더 깊이 들여다보기" 섹션 (필수)
+
+blog_writer가 생성하는 블로그 **"정리" 다음, "참고문헌" 앞**에 심화 섹션을 반드시 포함:
+
+> **목적**: 비교 분석 + 심화 확장을 **하나의 밀도 있는 섹션**으로 통합
 
 ```markdown
-## 다른 연구들은 뭐라고 하나?
+## 🔬 한걸음 더 깊이 들여다보기
 
-### [기존 연구 1] - [저널명] ([연도])
-- 구체적 수치 인용
-- 본 논문과의 차이점
+> 💡 이 섹션은 논문 내용을 넘어선 심화 분석입니다
 
-### 본 논문 vs 기존 연구 비교
-| 항목 | 본 논문 | 기존 연구 | 해석 |
-|-----|--------|----------|-----|
-| ... | ... | ... | ... |
+### 최신 연구들은 어떻게 보나?
+- 관련 연구 2-3개 인용 (저자/저널/연도/수치)
+- 비교 테이블 (본 논문 vs 최신 연구)
+- 왜 결과가 다른가 분석
 
-### 왜 수치가 다른가?
-- 측정 방법 차이
-- 대상 환자 차이
-- 시스템 차이
+### 왜 [현상]인가? - [메커니즘]
+- 핵심 현상의 생역학적/생물학적 원리
+
+### [주제]는 왜 필요한가? - [문제점]
+- 문제에 대한 구체적 해결책/임상 전략
+
+### [논쟁점] - [쟁점] 논쟁
+- 전문가 합의, 가이드라인 인용
+
+### 앞으로의 방향
+- 새로운 기술, 재료, 방법
 ```
 
-**주의:** 참고문헌에만 나열하고 본문에서 언급하지 않으면 안 됨!
+**research_expander의 검색 결과를 통합:**
+- comparison_data: 최신 연구들과의 비교
+- deep_dive_content: 메커니즘, 임상전략, 전문가의견, 최신동향
 
-#### 2. 이미지 크롭 검증 루프 필수
+**주의:** 비교 분석과 심화 분석을 **별도 섹션으로 분리하지 말 것!**
 
-image_curator 단계에서 크롭 후 반드시 Vision으로 검증:
+#### 3. 이미지 처리 필수 워크플로우 ⚠️
 
+**필수 이미지 목록:**
+1. **논문 커버 (Page 1)** - 대표이미지 + "원논문 소개" 섹션에 삽입
+2. **핵심 Figure들** - 본문에 삽입 (차트, 다이어그램, 테이블 등)
+
+**전체 이미지 처리 흐름:**
 ```
-크롭 실행 → Vision 검증 → 문제 발견 시 좌표 조정 → 재크롭 → 재검증
-(최대 3회 반복, 해결 안 되면 페이지 전체 이미지 사용)
+1. PDF 페이지 렌더링 (pdf_page_renderer.py)
+2. Vision으로 각 페이지 분석 → Figure 식별
+3. 크롭 스크립트 생성 (crop_figures_[논문ID].py)
+   - Page 1: 논문 커버 (제목, 저널, 저자, 초록 상단)
+   - 핵심 Figure들: 차트, 다이어그램 등
+4. 크롭 실행
+5. Vision 검증 → 문제 발견 시 좌표 조정 → 재크롭 (최대 3회)
+6. WebP 변환 (image_processor.py)
+7. Google Drive 업로드 (gdrive_uploader.py)
+8. 블로그 마크다운에 URL 삽입:
+   - featured_image: 논문 커버 URL
+   - "원논문 소개" 섹션: 논문 커버 이미지
+   - 본문: 각 Figure 이미지
+9. WordPress 발행
 ```
 
-**검증 항목:**
-- [ ] Figure 내용이 모두 포함되었는가?
+**검증 체크리스트:**
+- [ ] 논문 커버 (Page 1)가 크롭되었는가?
+- [ ] 논문 커버가 대표이미지(featured_image)로 설정되었는가?
+- [ ] 논문 커버가 "원논문 소개" 섹션에 삽입되었는가?
+- [ ] 모든 Figure 내용이 완전히 포함되었는가?
 - [ ] 캡션이 잘리지 않았는가?
 - [ ] 다이어그램의 모든 요소(a, b, c...)가 보이는가?
+- [ ] 모든 이미지가 WebP로 변환되었는가?
+- [ ] 모든 이미지가 Google Drive에 업로드되었는가?
 
 Each agent returns structured YAML with `status`, `confidence`, and `decisions`. Quality reviewer can re-invoke any agent up to 2 times (loop prevention).
 
@@ -184,6 +223,34 @@ GOOGLE_DRIVE_FOLDER_ID=...
 Python dependencies:
 ```bash
 pip install PyMuPDF requests python-dotenv Pillow markdown pyyaml
+```
+
+## Directory Structure
+
+```
+├── agents/                 # 에이전트 지침서 (md)
+│   ├── paper_analyzer.md   # 논문 분석
+│   ├── research_expander.md # Sonar 검색 + 심화
+│   ├── comparator.md       # 연구 비교
+│   ├── image_curator.md    # 이미지 크롭/검증
+│   ├── blog_writer.md      # 블로그 작성
+│   └── quality_reviewer.md # 품질 검토
+├── extractors/             # PDF/이미지 처리
+│   ├── pdf_page_renderer.py
+│   └── crop_figures_*.py   # 논문별 크롭 스크립트
+├── tools/                  # 유틸리티
+│   ├── sonar_api.py        # Perplexity Sonar API
+│   ├── image_processor.py  # PNG→WebP 변환
+│   ├── gdrive_uploader.py  # Google Drive 업로드
+│   └── publish_blog.py     # WordPress 발행
+├── templates/              # 템플릿
+│   └── blog_format.md      # 블로그 포맷 + 체크리스트
+├── input/                  # 입력 PDF
+├── output/                 # 생성된 블로그 + 이미지
+│   ├── images/pages/       # 렌더링된 페이지
+│   ├── images/cropped/     # 크롭된 Figure
+│   └── images/selected/webp/ # WebP 변환본
+└── state/                  # 세션 상태
 ```
 
 ## Key Commands
@@ -232,5 +299,9 @@ All progress tracked in `state/session.yaml`. On failure, resume from last succe
 2. Sonar API must use academic filter (`search_domain_filter: ["academic"]`)
 3. Quality gate: sections scoring < 0.7 trigger agent re-invocation
 4. Max 2 rework iterations per section to prevent infinite loops
-5. **⚠️ 블로그에 "다른 연구들은 뭐라고 하나?" 섹션 필수** - Sonar 검색 결과를 본문에 통합
-6. **⚠️ 이미지 크롭 후 반드시 Vision 검증** - 잘린 부분 있으면 재크롭 (최대 3회)
+5. **⚠️ 블로그 구조: 원논문 내용 → 정리 → 심화 섹션 → 참고문헌** (순서 준수)
+6. **⚠️ "한걸음 더 깊이 들여다보기" 섹션 필수** - "정리" 다음, "참고문헌" 앞에 배치
+7. **⚠️ 심화 섹션에 비교 분석 + 메커니즘 + 임상전략 + 전문가의견 통합** (별도 섹션으로 분리 금지)
+8. **⚠️ 논문 커버 (Page 1) 필수** - 대표이미지 + "원논문 소개" 섹션에 삽입
+9. **⚠️ 이미지 크롭 후 반드시 Vision 검증** - 잘린 부분 있으면 재크롭 (최대 3회)
+10. **⚠️ 발행 전 이미지 체크** - 모든 이미지 WebP 변환 + Google Drive 업로드 + URL 삽입 확인
